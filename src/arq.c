@@ -2,6 +2,100 @@
 #include "arq.h"
 
 /*******************************************
+*                                          * 
+*   Copia o arquivo de src para dest.      *
+*                                          *
+*   src = arquivo de origem.               *
+*   dest = arquivo de destino.             * 
+*                                          *
+*   Retorno: 0 para sucesso, -1 para erro  * 
+*                                          *
+*******************************************/
+int _CopyFile_(char *src , char *dest)
+{
+    // Variaveis
+    char *buf = malloc(BUFFER_SIZE_);
+    long int bytes;
+
+    // Ponteiros para os arquivos
+    FILE *src_file , *dest_file;
+
+    // Abre o arquivo de origem
+    src_file = fopen(src , "rb");
+    if(src_file == NULL) return -1;
+
+    // Cria o novo arquivo
+    dest_file = fopen(dest , "wb");
+    if(dest_file == NULL) return -1;
+
+    // Copia o arquivo
+    while((bytes = fread(buf , 1 , BUFFER_SIZE_ , src_file)) > 0)
+    {
+        if(bytes < 0)
+        {   
+            fclose(src_file);
+            fclose(dest_file);
+            free(buf);
+            return -1;
+        }
+
+        fwrite(buf, 1 , bytes , dest_file);
+    }
+
+    // Fim
+    fclose(src_file);
+    fclose(dest_file);
+    free(buf);
+    return 0;
+}
+
+// Retorna o nome do arquivo
+char *GetFileName(char *path)
+{
+    // Ponteiro para o nome do arquivo
+    char *FileName = path;
+
+    // Encontra o nome do arquivo
+    if(OS_WINDOWS) // Se for windows
+    {
+        for(;*path != '\0';path++)
+        {
+            if(*path == '\\') FileName = path + 1;
+        }
+    }
+    else // Se for linux
+    {
+        for(;*path != '\0';path++)
+        {
+            if(*path == '/') FileName = path + 1;
+        }
+    }
+
+    return FileName;
+}
+
+// Retorna o tamanho do arquivo. Em caso de erros retorna -1
+long int _GetFileSize_(FILE *arq)
+{
+    // Verifica se o argumento passado é nulo
+    if(arq == NULL) return -1;
+
+    /* Aponta o fluxo do arquivo para o fim
+    dessa forma conseguindo o tamanho do arquivo com ftell */
+    fseek(arq , 0 , SEEK_END);
+
+    // Recebe o tamanho do arquivo
+    long int FileSize = ftell(arq);
+
+    /* Aponta o fluxo do arquivo para o inicio
+    dessa forma voltando ao padrão */
+    fseek(arq , 0 , SEEK_SET);
+
+    return FileSize;
+
+}
+
+/*******************************************
 *   Envia um arquivo para o socket passado *
 *   no primeiro parâmetro.                 *
 *                                          *
@@ -9,23 +103,19 @@
 *   o caminho completo ate o arquivo.      *
 *                                          *
 *   Retorna 0 se tiver sucesso ou retorna  *
-*   um numero menor que 0 caso ocorra erro *
-*                                          *
-*   O terceiro parâmetro deve receber o    *
-*   nome do arquivo completo e com o tipo. *
-*   exemplo: Nomedoarquivo.exe , .jpg ,    *
-*   .mp4...                                *
+*   um numero menor que 0 caso ocorra erro *                                *
 *                                          *
 *   Retorno: -1 erro socket , -2 erro ao   *
 *   abri arquivo , -3 erro ao enviar ,     *
 *   0 sucesso.                             *
 *******************************************/
-int SendFileForSocket(int sock , const char *path , const char *NameOfFile)
+int SendFileForSocket(int sock ,char *FileName)
 {   
     // Variaveis
     FILE *arquivo;
     char *buffer = malloc(BUFFER_SIZE_) , info[10];
-    int BytesLidos = 0 , status = 0;
+    long int BytesLidos = 0; int status = 0;
+    char *NameFile = GetFileName(FileName);
 
     // Verifica erro no socket.
     if(sock == -1)
@@ -35,7 +125,7 @@ int SendFileForSocket(int sock , const char *path , const char *NameOfFile)
     }    
 
     // Abre o arquivo
-    arquivo = fopen(path , "rb");
+    arquivo = fopen(FileName , "rb");
     if(arquivo == NULL)
     {    
         free(buffer);
@@ -43,7 +133,7 @@ int SendFileForSocket(int sock , const char *path , const char *NameOfFile)
     }
 
     // Envia o nome do arquivo
-    status = send(sock , NameOfFile , strlen(NameOfFile) , 0);
+    status = send(sock , NameFile , strlen(NameFile) , 0);
     if(status == -1)
     {   
         fclose(arquivo);
@@ -99,7 +189,7 @@ int GetFileFromSocket(int sock)
     // Variaveis
     FILE *arquivo;
     char *buffer = malloc(BUFFER_SIZE_) , nome_arquivo[256];
-    int BytesRecebidos = 0 , status = 0;
+    long int BytesRecebidos = 0; int status = 0;
 
     // Verifica erro no socket
     if(sock == -1)

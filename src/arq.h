@@ -6,7 +6,6 @@
 #ifdef __unix__ 
 
     #define OS_WINDOWS 0
-    #include <netdb.h>
     #include <unistd.h>
     #include <sys/socket.h>
     #include <arpa/inet.h>
@@ -29,7 +28,10 @@
 #define BUFFER_SIZE_ (10 * 1024 * 1024)
 
 // Funções 
-int SendFileForSocket(int sock , const char *path , const char *NameOfFile); // Manda arquivo
+int SendFileForSocket(int sock ,char *FileName); // Manda arquivo
 int GetFileFromSocket(int sock); // Recebe arquivo
+char *GetFileName(char *path); // Retorna o nome do arquivo
+long int _GetFileSize_(FILE *arq); // Retorna o tamanho do arquivo
+int _CopyFile_(char *src , char *dest); // Copia o arquivo de src para dest
 
 #endif // Fim
